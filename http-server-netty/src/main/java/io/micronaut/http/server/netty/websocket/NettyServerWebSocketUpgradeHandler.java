@@ -82,7 +82,6 @@ import java.util.Optional;
 public final class NettyServerWebSocketUpgradeHandler implements RequestHandler {
 
     public static final String ID = ChannelPipelineCustomizer.HANDLER_WEBSOCKET_UPGRADE;
-    public static final String SCHEME_WEBSOCKET = "ws://";
     public static final String SCHEME_SECURE_WEBSOCKET = "wss://";
 
     public static final String COMPRESSION_HANDLER = "WebSocketServerCompressionHandler";
@@ -276,10 +275,14 @@ public final class NettyServerWebSocketUpgradeHandler implements RequestHandler 
      * @param ctx The context
      * @param req The request
      * @return The socket URL
+     * @throws IllegalStateException if SSL/TLS is not available
      */
     private String getWebSocketURL(ChannelHandlerContext ctx, HttpRequest req) {
         boolean isSecure = ctx.pipeline().get(SslHandler.class) != null;
-        return (isSecure ? SCHEME_SECURE_WEBSOCKET : SCHEME_WEBSOCKET) + req.getHeaders().get(HttpHeaderNames.HOST) + req.getUri();
+        if (!isSecure) {
+            throw new IllegalStateException("WebSocket connections must use SSL/TLS (wss://). Insecure WebSocket connections (ws://) are not allowed.");
+        }
+        return SCHEME_SECURE_WEBSOCKET + req.getHeaders().get(HttpHeaderNames.HOST) + req.getUri();
     }
 
     @Override
